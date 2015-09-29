@@ -1,0 +1,214 @@
+// *****************************************************************************
+// -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+// *****************************************************************************
+
+buildscript {
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
+    }
+}
+
+// *****************************************************************************
+//
+// *****************************************************************************
+
+allprojects {
+    configurations.all {
+        resolutionStrategy.componentSelection.all {
+            selection ->
+                switch(selection.candidate.group) {
+                    case 'commons-logging':
+                        if(selection.candidate.version.contains('99.0-does-not-exist')) {
+                            selection.reject('does-not-exist')
+                        }
+                        break
+                    case 'com.google.guava':
+                        if(selection.candidate.version.contains('-rc')) {
+                            selection.reject('Release candidate')
+                        }
+                        break
+                    case 'org.springframework.boot':
+                        if(selection.candidate.version.contains('.M')) {
+                            selection.reject('Milestone')
+                        }
+                        break
+                }
+        }
+    }
+}
+
+// *****************************************************************************
+//
+// *****************************************************************************
+
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'idea'
+apply plugin: 'osgi'
+apply plugin: 'com.bmuschko.nexus'
+apply plugin: 'com.github.ben-manes.versions'
+
+version = '3.6.0-SNAPSHOT'
+group   = 'com.github.lburgazzoli'
+
+ext {
+    isReleaseVersion = !version.endsWith("SNAPSHOT")
+    gitRoot          = "https://github.com/lburgazzoli"
+    gitProject       = "https://github.com/lburgazzoli/hazelcast-discovery-dns"
+
+    ext {
+        versions = [
+            slf4j              : '1.7.12',
+            hazelcast          : '3.6-SNAPSHOT',
+            guava              : '18.0',
+            commonsLang        : '3.4',
+            commonsCollections : '4.0',
+            junit              : '4.12',
+            dns                : '3.0.2'
+        ]
+    }
+
+    bundleImportPackages = [
+        '*'
+    ]
+
+    bundleExportPackages = [
+        "*"
+    ]
+
+    if(!project.hasProperty('nexusUsername') && !project.hasProperty('nexusPassword')) {
+        nexusUsername = "$System.env.CI_DEPLOY_USERNAME"
+        nexusPassword = "$System.env.CI_DEPLOY_PASSWORD"
+    }
+}
+
+compileJava {
+    // Suppress warnings about using Unsafe and sun.misc
+    //options.compilerArgs << '-XDignore.symbol.file'
+    //options.compilerArgs << '-parameters'
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+// *************************************************************************
+//
+// *************************************************************************
+
+idea {
+    module {
+        downloadJavadoc = true
+        downloadSources = true
+    }
+}
+
+// *************************************************************************
+//
+// *************************************************************************
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+
+    //maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+dependencies {
+    compile("org.slf4j:slf4j-api:$versions.slf4j") { transitive = false }
+    runtime("org.slf4j:slf4j-ext:$versions.slf4j") { transitive = false }
+
+    compile "com.hazelcast:hazelcast-all:$versions.hazelcast"
+    compile "com.spotify:dns:$versions.dns"
+
+    testCompile("org.slf4j:slf4j-simple:$versions.slf4j") { transitive = false }
+    testCompile "org.codehaus.groovy:groovy-all:$versions.groovy:indy"
+    testCompile "junit:junit:$versions.junit"
+}
+
+test {
+    testLogging {
+        events          'failed'
+        exceptionFormat 'full'
+    }
+}
+
+[compileJava, compileTestJava]*.options*.compilerArgs = [
+    "-Xlint:unchecked",
+    "-Xlint:deprecation",
+]
+
+// *************************************************************************
+//
+// *************************************************************************
+
+jar {
+    baseName = "${project.name}"
+
+    manifest {
+        attributes['Bundle-Description'     ] = "${project.name}"
+        attributes['Bundle-Name'            ] = "${project.name}"
+        attributes['Bundle-SymbolicName'    ] = "${project.group}-${project.name}"
+        attributes['Bundle-Version'         ] = project.version.replaceAll('-','.')
+        attributes['Implementation-Title'   ] = "${project.group}-${project.name}-${project.version}"
+        attributes['Implementation-Version' ] = project.version
+        attributes['Implementation-Vendor'  ] = 'Luca Burgazzoli'
+
+        instruction 'Import-Package' , bundleImportPackages.join(',')
+        instruction 'Export-Package' , bundleExportPackages.join(',')
+    }
+}
+
+// *************************************************************************
+//
+// *************************************************************************
+
+nexus {
+    sign    = false
+}
+
+extraArchive {
+    javadoc = true
+    sources = true
+    tests   = false
+}
+
+modifyPom {
+    project {
+        name          = "${project.name}"
+        description   = "${project.name}"
+        url           = "${project.gitProject}"
+        packaging     = 'jar'
+
+        licenses {
+            license {
+                name         = "The Apache Software License, Version 2.0"
+                url          = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution = "repo"
+            }
+        }
+
+        scm {
+            url                 = "${project.gitProject}"
+            connection          = "scm:git:${project.gitProject}.git"
+            developerConnection = "scm:git:${project.gitProject}.git"
+        }
+    }
+}
+
+dependencyUpdates {
+    revision = 'release'
+}
+
+tasks.withType(GroovyCompile) {
+    groovyOptions.optimizationOptions.indy = true
+}

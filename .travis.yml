@@ -1,0 +1,14 @@
+sudo: false
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
+language:
+- java
+script:
+- ./gradlew clean uploadArchives
+jdk:
+- oraclejdk8
+env:
+  global:
+  - CI_TRAVIS=true
