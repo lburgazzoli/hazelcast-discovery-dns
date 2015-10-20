@@ -16,10 +16,9 @@
 package com.github.lburgazzoli.hazelcast.discovery.dns;
 
 import com.hazelcast.nio.Address;
-import com.hazelcast.spi.discovery.DiscoveredNode;
-import com.hazelcast.spi.discovery.DiscoveryMode;
+import com.hazelcast.spi.discovery.DiscoveryNode;
 import com.hazelcast.spi.discovery.DiscoveryStrategy;
-import com.hazelcast.spi.discovery.SimpleDiscoveredNode;
+import com.hazelcast.spi.discovery.SimpleDiscoveryNode;
 import com.spotify.dns.DnsSrvResolver;
 import com.spotify.dns.DnsSrvResolvers;
 import com.spotify.dns.LookupResult;
@@ -48,7 +47,7 @@ public class DnsDiscoveryStrategy implements DiscoveryStrategy {
 
 
     @Override
-    public void start(DiscoveryMode discoveryMode) {
+    public void start() {
         this.resolver = DnsSrvResolvers.newBuilder()
             .cachingLookups(true)
             .retainingDataOnFailures(true)
@@ -57,14 +56,14 @@ public class DnsDiscoveryStrategy implements DiscoveryStrategy {
     }
 
     @Override
-    public Collection<DiscoveredNode> discoverNodes() {
+    public Collection<DiscoveryNode> discoverNodes() {
         final Properties empty = new Properties();
-        final Collection<DiscoveredNode> list = new LinkedList<>();
+        final Collection<DiscoveryNode> list = new LinkedList<>();
 
         if(this.resolver != null) {
             resolver.resolve(this.serviceName).stream()
                 .map(new Result2Address())
-                .map(address -> new SimpleDiscoveredNode(address))
+                .map(SimpleDiscoveryNode::new)
                 .forEach(list::add);
         }
 

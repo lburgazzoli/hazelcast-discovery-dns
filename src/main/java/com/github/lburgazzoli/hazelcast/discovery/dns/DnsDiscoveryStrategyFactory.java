@@ -17,6 +17,8 @@ package com.github.lburgazzoli.hazelcast.discovery.dns;
 
 
 import com.hazelcast.config.properties.PropertyDefinition;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.spi.discovery.DiscoveryNode;
 import com.hazelcast.spi.discovery.DiscoveryStrategy;
 import com.hazelcast.spi.discovery.DiscoveryStrategyFactory;
 
@@ -42,7 +44,8 @@ public class DnsDiscoveryStrategyFactory implements DiscoveryStrategyFactory {
     }
 
     @Override
-    public DiscoveryStrategy newDiscoveryStrategy(Map<String, Comparable> properties) {
+    public DiscoveryStrategy newDiscoveryStrategy(DiscoveryNode discoveryNode, ILogger logger,
+                                                  Map<String, Comparable> properties) {
         return new DnsDiscoveryStrategy(properties);
     }
 
