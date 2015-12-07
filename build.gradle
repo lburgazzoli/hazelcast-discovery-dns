@@ -66,11 +66,11 @@ ext {
 
     ext {
         versions = [
-            slf4j              : '1.7.12',
-            hazelcast          : '3.6-EA',
+            slf4j              : '1.7.13',
+            hazelcast          : '3.6-EA2',
             guava              : '18.0',
             commonsLang        : '3.4',
-            commonsCollections : '4.0',
+            commonsCollections : '4.1',
             junit              : '4.12',
             dns                : '3.0.2',
             groovy             : '2.4.5'
@@ -202,6 +202,14 @@ modifyPom {
             url                 = "${project.gitProject}"
             connection          = "scm:git:${project.gitProject}.git"
             developerConnection = "scm:git:${project.gitProject}.git"
+        }
+
+        developers {
+            developer {
+                id 'lburgazzoli'
+                name 'Luca Burgazzoli'
+                url gitRoot
+            }
         }
     }
 }
