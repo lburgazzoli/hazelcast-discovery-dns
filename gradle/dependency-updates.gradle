@@ -1,0 +1,31 @@
+
+allprojects {
+    configurations.all {
+        resolutionStrategy.componentSelection.all {
+            selection ->
+                switch(selection.candidate.group) {
+                    case 'commons-logging':
+                        if(selection.candidate.version.contains('99.0-does-not-exist')) {
+                            selection.reject('does-not-exist')
+                        }
+                        break
+                    case 'com.google.guava':                    
+                    case 'com.fasterxml.jackson.core':
+                    case 'com.fasterxml.jackson.module':
+                        if(selection.candidate.version.contains('-rc')) {
+                            selection.reject('Release candidate')
+                        }
+                        break
+                    case 'org.springframework.boot':
+                        if(selection.candidate.version.contains('.M')) {
+                            selection.reject('Release candidate')
+                        }
+                        break
+                }
+        }
+    }
+}
+
+dependencyUpdates {
+    revision = 'release'
+}

@@ -2,59 +2,17 @@
 // -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
 // *****************************************************************************
 
-buildscript {
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
-    }
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'maven'
+    id 'idea'
+    id 'osgi'
+    id 'com.bmuschko.nexus' version '2.3.1'
+    id 'com.github.ben-manes.versions' version '0.11.3'
 }
 
-// *****************************************************************************
-//
-// *****************************************************************************
-
-allprojects {
-    configurations.all {
-        resolutionStrategy.componentSelection.all {
-            selection ->
-                switch(selection.candidate.group) {
-                    case 'commons-logging':
-                        if(selection.candidate.version.contains('99.0-does-not-exist')) {
-                            selection.reject('does-not-exist')
-                        }
-                        break
-                    case 'com.google.guava':
-                        if(selection.candidate.version.contains('-rc')) {
-                            selection.reject('Release candidate')
-                        }
-                        break
-                    case 'org.springframework.boot':
-                        if(selection.candidate.version.contains('.M')) {
-                            selection.reject('Milestone')
-                        }
-                        break
-                }
-        }
-    }
-}
-
-// *****************************************************************************
-//
-// *****************************************************************************
-
-apply plugin: 'java'
-apply plugin: 'groovy'
-apply plugin: 'maven'
-apply plugin: 'idea'
-apply plugin: 'osgi'
-apply plugin: 'com.bmuschko.nexus'
-apply plugin: 'com.github.ben-manes.versions'
+apply from: "$rootDir/gradle/dependency-updates.gradle"
 
 version = '3.6.0-SNAPSHOT'
 group   = 'com.github.lburgazzoli'
@@ -148,6 +106,10 @@ test {
     "-Xlint:deprecation",
 ]
 
+tasks.withType(GroovyCompile) {
+    groovyOptions.optimizationOptions.indy = true
+}
+
 // *************************************************************************
 //
 // *************************************************************************
@@ -212,12 +174,4 @@ modifyPom {
             }
         }
     }
-}
-
-dependencyUpdates {
-    revision = 'release'
-}
-
-tasks.withType(GroovyCompile) {
-    groovyOptions.optimizationOptions.indy = true
 }
