@@ -20,10 +20,11 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.InterfacesConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
-import com.hazelcast.spi.discovery.DiscoveredNode;
-import com.hazelcast.spi.discovery.DiscoveryMode;
+import com.hazelcast.nio.Address;
+import com.hazelcast.spi.discovery.DiscoveryNode;
 import com.hazelcast.spi.discovery.DiscoveryStrategy;
 import com.hazelcast.spi.discovery.DiscoveryStrategyFactory;
+import com.hazelcast.spi.discovery.SimpleDiscoveryNode;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -42,19 +43,20 @@ public class DnsDiscoveryTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(DnsDiscoveryTest.class);
 
     @Test
-    public void discoveryProviderTest() {
+    public void discoveryProviderTest() throws Exception {
         Map<String, Comparable> properties = new HashMap<>();
         properties.put("serviceName", "hazelcast.skydns.lb");
 
+        DiscoveryNode local = new SimpleDiscoveryNode(new Address("127.0.0.1", 1010));
         DiscoveryStrategyFactory factory = new DnsDiscoveryStrategyFactory();
-        DiscoveryStrategy provider = factory.newDiscoveryStrategy(properties);
+        DiscoveryStrategy provider = factory.newDiscoveryStrategy(local, null, properties);
 
-        provider.start(DiscoveryMode.Member);
+        provider.start();
 
-        Iterable<DiscoveredNode> nodes = provider.discoverNodes();
+        Iterable<DiscoveryNode> nodes = provider.discoverNodes();
         assertNotNull(nodes);
 
-        for(DiscoveredNode node : nodes) {
+        for(DiscoveryNode node : nodes) {
             LOGGER.info("Node -> {}", node.getPublicAddress());
         }
     }
