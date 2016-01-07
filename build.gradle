@@ -38,6 +38,7 @@ group   = 'com.github.lburgazzoli'
 
 ext {
     isReleaseVersion = !version.endsWith("SNAPSHOT")
+    isCiBuild        = System.getenv('CI_TRAVIS') != null
     gitRoot          = "https://github.com/lburgazzoli"
     gitProject       = "https://github.com/lburgazzoli/hazelcast-discovery-dns"
     gitURI           = "git@github.com/lburgazzoli/hazelcast-discovery-dns.git"
@@ -150,7 +151,7 @@ jar {
 // *************************************************************************
 
 nexus {
-    sign = project.isReleaseVersion
+    sign = project.isReleaseVersion && !project.isCiBuild
 }
 
 extraArchive {
