@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Properties;
-import java.util.function.Function;
+import java.util.Objects;
 
 public class DnsDiscoveryStrategy implements DiscoveryStrategy {
     private static final Logger LOGGER = LoggerFactory.getLogger(DnsDiscoveryStrategy.class);
@@ -57,13 +56,11 @@ public class DnsDiscoveryStrategy implements DiscoveryStrategy {
 
     @Override
     public Collection<DiscoveryNode> discoverNodes() {
-        final Properties empty = new Properties();
         final Collection<DiscoveryNode> list = new LinkedList<>();
-
         if(this.resolver != null) {
             resolver.resolve(this.serviceName).stream()
-                .map(new Result2Address())
-                .map(SimpleDiscoveryNode::new)
+                .map(this::asNode)
+                .filter(Objects::nonNull)
                 .forEach(list::add);
         }
 
@@ -79,15 +76,13 @@ public class DnsDiscoveryStrategy implements DiscoveryStrategy {
     //
     // *************************************************************************
 
-    private final class Result2Address implements Function<LookupResult, Address> {
-        @Override
-        public Address apply(LookupResult result) {
-            try {
-                return new Address(result.host(), result.port());
-            } catch(Exception e) {
-                LOGGER.warn("", e);
-            }
-            return null;
+    private DiscoveryNode asNode(LookupResult result) {
+        try {
+            return new SimpleDiscoveryNode(new Address(result.host(), result.port()));
+        } catch(Exception e) {
+            LOGGER.warn("", e);
         }
+
+        return null;
     }
 }
