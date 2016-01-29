@@ -61,7 +61,11 @@ ext {
         "*"
     ]
 
-    if(!project.hasProperty('nexusUsername') && !project.hasProperty('nexusPassword')) {
+    if (isCiBuild && isReleaseVersion) {
+        // This will fail for release versions
+        nexusUsername = ""
+        nexusPassword = ""
+    } else if(!project.hasProperty('nexusUsername') && !project.hasProperty('nexusPassword')) {
         nexusUsername = "$System.env.CI_DEPLOY_USERNAME"
         nexusPassword = "$System.env.CI_DEPLOY_PASSWORD"
     }
