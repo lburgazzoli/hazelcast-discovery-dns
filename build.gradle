@@ -46,9 +46,9 @@ ext {
     ext {
         versions = [
             slf4j     : '1.7.13',
-            hazelcast : '3.6-EA3',
+            hazelcast : '3.6',
             junit     : '4.12',
-            dns       : '3.0.2',
+            dns       : '3.1.1',
             groovy    : '2.4.5'
         ]
     }
