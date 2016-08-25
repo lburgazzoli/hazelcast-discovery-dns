@@ -46,7 +46,7 @@ public class DnsDiscoveryStrategyFactory implements DiscoveryStrategyFactory {
     @Override
     public DiscoveryStrategy newDiscoveryStrategy(
             DiscoveryNode discoveryNode, ILogger logger,Map<String, Comparable> properties) {
-        return new DnsDiscoveryStrategy(properties);
+        return new DnsDiscoveryStrategy(logger, properties);
     }
 
     @Override

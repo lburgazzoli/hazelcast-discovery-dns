@@ -22,13 +22,10 @@ plugins {
     id 'idea'
     id 'osgi'
     id 'com.bmuschko.nexus' version '2.3.1'
-    id 'net.researchgate.release' version '2.3.4'
-    //id 'com.github.ben-manes.versions' version '0.11.3'
-    //id "com.github.nwillc.vplugin" version "1.2.5"
+    id 'net.researchgate.release' version '2.4.0'
 }
 
 apply plugin: 'io.codearte.nexus-staging'
-//apply from: "$rootDir/gradle/dependency-updates.gradle"
 
 // *****************************************************************************
 //
@@ -45,11 +42,9 @@ ext {
 
     ext {
         versions = [
-            slf4j     : '1.7.13',
-            hazelcast : '3.6',
-            junit     : '4.12',
-            dns       : '3.1.1',
-            groovy    : '2.4.5'
+            slf4j     : '1.7.21',
+            hazelcast : '3.7',
+            junit     : '4.12'
         ]
     }
 
@@ -72,10 +67,6 @@ ext {
 }
 
 compileJava {
-    // Suppress warnings about using Unsafe and sun.misc
-    //options.compilerArgs << '-XDignore.symbol.file'
-    //options.compilerArgs << '-parameters'
-
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 }
@@ -106,16 +97,14 @@ dependencies {
     runtime("org.slf4j:slf4j-ext:$versions.slf4j") { transitive = false }
 
     compile "com.hazelcast:hazelcast:$versions.hazelcast"
-    compile "com.spotify:dns:$versions.dns"
 
     testCompile("org.slf4j:slf4j-simple:$versions.slf4j") { transitive = false }
-    testCompile "org.codehaus.groovy:groovy-all:$versions.groovy:indy"
     testCompile "junit:junit:$versions.junit"
 }
 
 test {
     testLogging {
-        events          'failed'
+        events          'started', 'passed', 'skipped', 'failed', 'standardOut', 'standardError' 
         exceptionFormat 'full'
     }
 }
@@ -124,10 +113,6 @@ test {
     "-Xlint:unchecked",
     "-Xlint:deprecation",
 ]
-
-tasks.withType(GroovyCompile) {
-    groovyOptions.optimizationOptions.indy = true
-}
 
 // *************************************************************************
 //

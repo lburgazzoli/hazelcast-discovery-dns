@@ -15,74 +15,104 @@
  */
 package com.github.lburgazzoli.hazelcast.discovery.dns;
 
+import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.Address;
+import com.hazelcast.spi.discovery.AbstractDiscoveryStrategy;
 import com.hazelcast.spi.discovery.DiscoveryNode;
-import com.hazelcast.spi.discovery.DiscoveryStrategy;
 import com.hazelcast.spi.discovery.SimpleDiscoveryNode;
-import com.spotify.dns.DnsSrvResolver;
-import com.spotify.dns.DnsSrvResolvers;
-import com.spotify.dns.LookupResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 
-public class DnsDiscoveryStrategy implements DiscoveryStrategy {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DnsDiscoveryStrategy.class);
+import javax.naming.NamingEnumeration;
+import javax.naming.directory.DirContext;
+import javax.naming.directory.InitialDirContext;
+
+public class DnsDiscoveryStrategy extends AbstractDiscoveryStrategy {
+    private static final ILogger LOGGER;
+    private static final String[] ATTRIBUTE_IDS;
+    private static final Hashtable<String, String> ENV;
+
+    static {
+        LOGGER = Logger.getLogger(DnsDiscoveryStrategy.class);
+        ATTRIBUTE_IDS = new String[] { "SRV" };
+
+        ENV = new Hashtable<>();
+        ENV.put("java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory");
+        ENV.put("java.naming.provider.url", "dns:");
+    }
 
     private final String serviceName;
 
-    private DnsSrvResolver resolver;
-
-    public DnsDiscoveryStrategy(final Map<String, Comparable> properties) {
-        this.serviceName = (String) properties.get(DnsDiscovery.PROPERTY_SERVICE_NAME.key());
+    public DnsDiscoveryStrategy(ILogger logger, Map<String, Comparable> properties) {
+        super(logger, properties);
+        
+        this.serviceName = (String) getOrNull(DnsDiscovery.PROPERTY_SERVICE_NAME);
         if(this.serviceName == null) {
             throw new RuntimeException("Property 'serviceName' is missing in the DNS provider");
         }
     }
 
+    // *************************************************************************
+    // DiscoveryStrategy
+    // *************************************************************************
 
     @Override
-    public void start() {
-        this.resolver = DnsSrvResolvers.newBuilder()
-            .cachingLookups(true)
-            .retainingDataOnFailures(true)
-            .dnsLookupTimeoutMillis(1000)
-            .build();
-    }
+    public Iterable<DiscoveryNode> discoverNodes() {
+        List<DiscoveryNode> servers = Collections.emptyList();
 
-    @Override
-    public Collection<DiscoveryNode> discoverNodes() {
-        final Collection<DiscoveryNode> list = new LinkedList<>();
-        if(this.resolver != null) {
-            resolver.resolve(this.serviceName).stream()
-                .map(this::asNode)
-                .filter(Objects::nonNull)
-                .forEach(list::add);
+        try {
+            DirContext ctx = new InitialDirContext(ENV);
+            NamingEnumeration<?> resolved = ctx.getAttributes(serviceName, ATTRIBUTE_IDS).get("srv").getAll();
+            
+            if (resolved.hasMore()) {
+                servers = new LinkedList<>();
+
+                while (resolved.hasMore()) {
+                    Address address = srvRecordToAddress((String)resolved.next());
+
+                    if (LOGGER.isFinestEnabled()) {
+                        LOGGER.finest("Found node ip-address is: " + address);
+                    }
+                    
+                    servers.add(new SimpleDiscoveryNode(address));
+                }
+            } else {
+                LOGGER.warning("Could not find any service for serviceName '" + serviceName + "'");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Could not resolve services via DNS", e);
         }
 
-        return list;
+        return servers;
     }
 
     @Override
     public void destroy() {
-        this.resolver = null;
     }
 
+
     // *************************************************************************
-    //
+    // DiscoveryStrategy
     // *************************************************************************
 
-    private DiscoveryNode asNode(LookupResult result) {
-        try {
-            return new SimpleDiscoveryNode(new Address(result.host(), result.port()));
-        } catch(Exception e) {
-            LOGGER.warn("", e);
-        }
+    private Address srvRecordToAddress(String record) throws Exception {
+        String[] items = record.split(" ");
+        String host = items[3].trim();
+        String port = items[2].trim();
 
-        return null;
+        return new Address(
+            items[3].trim(), 
+            port.length() > 0 
+                ? Integer.parseInt(port) 
+                : NetworkConfig.DEFAULT_PORT
+        );
     }
 }

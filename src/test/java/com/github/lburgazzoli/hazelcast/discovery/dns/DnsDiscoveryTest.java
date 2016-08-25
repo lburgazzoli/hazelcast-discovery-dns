@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package om.github.lburgazzoli.hazelcast.discovery.dns;
+package com.github.lburgazzoli.hazelcast.discovery.dns;
 
-import com.github.lburgazzoli.hazelcast.discovery.dns.DnsDiscoveryStrategyFactory;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.DiscoveryConfig;
+import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.InterfacesConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
@@ -27,25 +28,23 @@ import com.hazelcast.spi.discovery.DiscoveryStrategyFactory;
 import com.hazelcast.spi.discovery.SimpleDiscoveryNode;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertNotNull;
-
-
-@Ignore
 public class DnsDiscoveryTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(DnsDiscoveryTest.class);
 
     @Test
     public void discoveryProviderTest() throws Exception {
         Map<String, Comparable> properties = new HashMap<>();
-        properties.put("serviceName", "hazelcast.skydns.lb");
+        properties.put("serviceName", "_xmpp-server._tcp.gmail.com");
 
         DiscoveryNode local = new SimpleDiscoveryNode(new Address("127.0.0.1", 1010));
         DiscoveryStrategyFactory factory = new DnsDiscoveryStrategyFactory();
@@ -54,7 +53,8 @@ public class DnsDiscoveryTest {
         provider.start();
 
         Iterable<DiscoveryNode> nodes = provider.discoverNodes();
-        assertNotNull(nodes);
+        Assert.assertNotNull(nodes);
+        Assert.assertTrue("Empty DiscoveryNode list", nodes.iterator().hasNext());
 
         for(DiscoveryNode node : nodes) {
             LOGGER.info("Node -> {}", node.getPublicAddress());
@@ -62,9 +62,18 @@ public class DnsDiscoveryTest {
     }
 
     @Test
-    public void hazelcastInstanceTest() throws Exception {
-        final Config config = loadConfig("test-hazelcast-discovery-dns.xml");
-        Hazelcast.newHazelcastInstance(config);
+    public void hazelcastConfigurationTest() throws Exception {
+        Config config = loadConfig("test-hazelcast-discovery-dns.xml");
+        DiscoveryConfig discovery = config.getNetworkConfig().getJoin().getDiscoveryConfig();
+        Collection<DiscoveryStrategyConfig> discoveryConfs = discovery.getDiscoveryStrategyConfigs();
+
+        Assert.assertFalse("No DiscoveryStrategy configured", discoveryConfs.isEmpty());
+        Assert.assertEquals(1, discoveryConfs.size());
+
+        DiscoveryStrategyConfig discoveryConf = discoveryConfs.iterator().next();
+
+        Assert.assertEquals("_hz._tcp.localdomain", discoveryConf.getProperties().get(DnsDiscovery.PROPERTY_SERVICE_NAME.key()));
+        Assert.assertEquals(DnsDiscoveryStrategy.class.getName(), discoveryConf.getClassName());
     }
 
     // *************************************************************************
