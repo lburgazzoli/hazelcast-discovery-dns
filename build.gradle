@@ -21,8 +21,8 @@ plugins {
     id 'maven'
     id 'idea'
     id 'osgi'
-    id 'com.bmuschko.nexus' version '2.3.1'
-    id 'net.researchgate.release' version '2.4.0'
+    id 'signing'
+    id 'net.researchgate.release' version '2.4.1'
 }
 
 apply plugin: 'io.codearte.nexus-staging'
@@ -31,14 +31,19 @@ apply plugin: 'io.codearte.nexus-staging'
 //
 // *****************************************************************************
 
-group   = 'com.github.lburgazzoli'
+group               = 'com.github.lburgazzoli'
+description         = 'An Etcd based discovery mechanisms for Hazelcast'
+sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_7
 
 ext {
     isReleaseVersion = !version.endsWith("SNAPSHOT")
-    isCiBuild        = System.getenv('CI_TRAVIS') != null
+    isCI             = Boolean.valueOf("$System.env.CI")
+    isPR             = "false" != System.env.TRAVIS_PULL_REQUEST 
     gitRoot          = "https://github.com/lburgazzoli"
     gitProject       = "https://github.com/lburgazzoli/hazelcast-discovery-dns"
-    gitURI           = "git@github.com/lburgazzoli/hazelcast-discovery-dns.git"
+    gitURL           = "git@github.com/lburgazzoli/hazelcast-discovery-dns.git"
+    gradleCiTasks    = (isReleaseVersion || isPR) ? ['clean', 'test'] : ['clean', 'test', 'uploadArchives']
 
     ext {
         versions = [
@@ -56,19 +61,21 @@ ext {
         "*"
     ]
 
-    if (isCiBuild && isReleaseVersion) {
-        // This will fail for release versions
-        nexusUsername = ""
-        nexusPassword = ""
-    } else if(!project.hasProperty('nexusUsername') && !project.hasProperty('nexusPassword')) {
+    if (isReleaseVersion) {
+        nexusUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    } else {
+        nexusUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+    }
+
+    if(!project.hasProperty('nexusUsername') && !project.hasProperty('nexusPassword')) {
         nexusUsername = "$System.env.CI_DEPLOY_USERNAME"
         nexusPassword = "$System.env.CI_DEPLOY_PASSWORD"
     }
 }
 
 compileJava {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 // *************************************************************************
@@ -135,46 +142,80 @@ jar {
     }
 }
 
-// *************************************************************************
-//
-// *************************************************************************
+// *****************************************************************************
+// ARTIFACTS
+// *****************************************************************************
 
-nexus {
-    sign = project.isReleaseVersion && !project.isCiBuild
+task sourcesJar(type: Jar) {
+    classifier 'sources'
+    from sourceSets.main.allSource
 }
 
-extraArchive {
-    javadoc = true
-    sources = true
-    tests   = false
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier 'javadoc'
+    from javadoc.destinationDir
 }
 
-modifyPom {
-    project {
-        name          = "${project.name}"
-        description   = "${project.name}"
-        url           = "${project.gitProject}"
-        packaging     = 'jar'
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
 
-        licenses {
-            license {
-                name         = "The Apache Software License, Version 2.0"
-                url          = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                distribution = "repo"
+// *****************************************************************************
+// Publish to Sonatype OSS
+// *****************************************************************************
+
+signing {
+    required {
+        isReleaseVersion
+    }
+
+    sign configurations.archives
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: project.nexusUrl) {
+                authentication(
+                    userName: project.nexusUsername,
+                    password: project.nexusPassword
+                )
             }
-        }
 
-        scm {
-            url                 = "${project.gitProject}"
-            connection          = "scm:git:${project.gitProject}"
-            developerConnection = "scm:git:${project.gitProject}"
-        }
+            beforeDeployment {
+                MavenDeployment deployment -> signing.signPom(deployment)
+            }
 
-        developers {
-            developer {
-                id 'lburgazzoli'
-                name 'Luca Burgazzoli'
-                url gitRoot
+            pom.groupId = project.group
+            pom.artifactId = project.name
+            pom.version = project.version
+
+            pom.project {
+                name project.name
+                description project.name
+                url project.gitProject
+
+                scm {
+                    url project.gitProject
+                    connection "scm:${project.gitProject}"
+                    developerConnection "scm:${project.gitURL}"
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'lburgazzoli'
+                        name 'Luca Burgazzoli'
+                    }
+                }
             }
         }
     }
@@ -185,8 +226,9 @@ modifyPom {
 // *****************************************************************************
 
 afterReleaseBuild.dependsOn uploadArchives
-//closeAndPromoteRepository.dependsOn uploadArchives
 
-task promote(dependsOn: closeAndPromoteRepository) {
-    println "Release"
+task close(dependsOn: 'closeAndPromoteRepository') {
+}
+
+task ci(dependsOn: project.gradleCiTasks) {
 }
