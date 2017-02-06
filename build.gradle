@@ -22,10 +22,28 @@ plugins {
     id 'idea'
     id 'osgi'
     id 'signing'
-    id 'net.researchgate.release' version '2.4.1'
+    id 'net.researchgate.release' version '2.5.0'
+    id 'com.github.ben-manes.versions' version '0.13.0'
 }
 
 apply plugin: 'io.codearte.nexus-staging'
+
+// *****************************************************************************
+//
+// *****************************************************************************
+
+dependencyUpdates.resolutionStrategy = {
+  componentSelection { rules ->
+    rules.all { ComponentSelection selection ->
+        boolean rejected = ['beta', 'rc', 'cr', 'm', 'ea'].any {
+            qualifier -> selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+        }
+        if (rejected) {
+            selection.reject('Release candidate')
+        }
+    }
+  }
+}
 
 // *****************************************************************************
 //
@@ -47,8 +65,8 @@ ext {
 
     ext {
         versions = [
-            slf4j     : '1.7.21',
-            hazelcast : '3.7.2',
+            slf4j     : '1.7.22',
+            hazelcast : '3.7.5',
             junit     : '4.12'
         ]
     }
