@@ -40,21 +40,20 @@ sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
 ext {
-    isReleaseVersion = !version.endsWith("SNAPSHOT")
-    isCI             = Boolean.valueOf("$System.env.CI")
-    isPR             = "false" != System.env.TRAVIS_PULL_REQUEST 
+    isReleaseVersion  = !version.endsWith("SNAPSHOT")
+    isSnapshotVersion = version.endsWith("SNAPSHOT")
+    isCI              = Boolean.valueOf("$System.env.CI")
+    isPR              = System.env.CI_PULL_REQUEST?.trim() as Boolean
     gitRoot          = "https://github.com/lburgazzoli"
     gitProject       = "https://github.com/lburgazzoli/hazelcast-discovery-dns"
     gitURL           = "git@github.com/lburgazzoli/hazelcast-discovery-dns.git"
     gradleCiTasks    = (isReleaseVersion || isPR) ? ['clean', 'test'] : ['clean', 'test', 'uploadArchives']
 
-    ext {
-        versions = [
-            slf4j     : '1.7.25',
-            hazelcast : '3.8.3',
-            junit     : '4.12'
-        ]
-    }
+    versions = [
+        slf4j     : '1.7.25',
+        hazelcast : '3.8.3',
+        junit     : '4.12'
+    ]
 
     bundleImportPackages = [
         '*'
@@ -219,8 +218,13 @@ uploadArchives {
 
 afterReleaseBuild.dependsOn uploadArchives
 
-task close(dependsOn: 'closeAndPromoteRepository') {
+task ci(dependsOn: project.gradleCiTasks) {
+    doFirst {
+        println "=============================================================="
+        println "CI Tasks: ${project.gradleCiTasks}"
+        println "=============================================================="
+    }
 }
 
-task ci(dependsOn: project.gradleCiTasks) {
+task close(dependsOn: 'closeAndPromoteRepository') {
 }
