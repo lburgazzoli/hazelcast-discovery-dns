@@ -2,31 +2,16 @@
 //
 // *****************************************************************************
 
-buildscript {
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.3'
-    }
-}
-
-
 plugins {
     id 'java'
     id 'groovy'
     id 'maven'
-    id 'idea'
     id 'osgi'
     id 'signing'
-    id 'net.researchgate.release' version '2.5.0'
-    id 'com.github.ben-manes.versions' version '0.13.0'
+    id 'net.researchgate.release' version '2.6.0'
+    id 'com.github.ben-manes.versions' version '0.15.0'
+    id "io.codearte.nexus-staging" version '0.9.0'
 }
-
-apply plugin: 'io.codearte.nexus-staging'
 
 // *****************************************************************************
 //
@@ -35,7 +20,7 @@ apply plugin: 'io.codearte.nexus-staging'
 dependencyUpdates.resolutionStrategy = {
   componentSelection { rules ->
     rules.all { ComponentSelection selection ->
-        boolean rejected = ['beta', 'rc', 'cr', 'm', 'ea'].any {
+        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'ea'].any {
             qualifier -> selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
         }
         if (rejected) {
@@ -65,8 +50,8 @@ ext {
 
     ext {
         versions = [
-            slf4j     : '1.7.22',
-            hazelcast : '3.7.5',
+            slf4j     : '1.7.25',
+            hazelcast : '3.8.3',
             junit     : '4.12'
         ]
     }
@@ -94,17 +79,6 @@ ext {
 compileJava {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
-}
-
-// *************************************************************************
-//
-// *************************************************************************
-
-idea {
-    module {
-        downloadJavadoc = true
-        downloadSources = true
-    }
 }
 
 // *************************************************************************
