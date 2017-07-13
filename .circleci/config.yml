@@ -1,0 +1,11 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/hazelcast-discovery-dns
+    docker:
+      - image: circleci/openjdk:8-jdk
+    steps:
+      - checkout
+      - run: ./gradlew ci
+      - store_test_results:
+          path: build/reports/tests/test
