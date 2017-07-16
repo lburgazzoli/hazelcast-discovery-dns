@@ -13,7 +13,7 @@ jdk:
   - oraclejdk8
 
 script: "
-  ./gradelw ci
+  ./gradlew ci
 "
 env:
   global:
