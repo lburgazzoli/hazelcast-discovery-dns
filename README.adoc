@@ -1,0 +1,3 @@
+== hazelcast-discovery-etcd
+
+image:https://travis-ci.org/lburgazzoli/hazelcast-discovery-etcd.svg[title="Build Status", link="https://travis-ci.org/lburgazzoli/hazelcast-discovery-etcd"]
